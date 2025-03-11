@@ -1,10 +1,8 @@
 # SmartShutdown
 
-## Descriptif
-
 Ce script fournit une solution pratique pour contrôler l'extinction de l'ordinateur tout en permettant aux utilisateurs connectés d'intervenir si nécessaire.
 
-Ce script PowerShell permet de fermer l'ordinateur en décomptant un temps fixé en secondes, avec la possibilité d'annuler l'arrêt si nécessaire.
+## Descriptif
 
 **Fonctionnalités principales :**
 
@@ -26,18 +24,4 @@ Ce script PowerShell permet de fermer l'ordinateur en décomptant un temps fixé
 4. **Gestion du temps :**
    
    - Un timer démarre le compte à rebours toutes les secondes.
-   - Si l'utilisateur clique sur "Annuler", l'arrêt est annulé ou alors exécuté si le compteur arrive à zéro sans interaction de l’utilisateur.
-
-
-
-# 
-
-### Résumé des fonctionnalités :
-
-- **Vérification de connexion** : Si personne n'est connecté, il arrête immédiatement.
-
-- **Interface utilisateur** : Affiche un formulaire avec un compteur et un bouton d'annulation.
-
-- **Démarrage du décompte** : 30 secondes pour permettre aux utilisateurs de se déconnecter ou sauvegarder.
-
-Ce script est utile pour une fermeture contrôlée, évitant la perte de données non-sauvegardées.
+   - Si l'utilisateur clique sur "Annuler", l'arrêt est annulé ou alors exécuté si le compteur arrive à zéro.

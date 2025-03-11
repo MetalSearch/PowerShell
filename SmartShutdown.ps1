@@ -1,102 +1,129 @@
-﻿<#
+<#
 =========================================================================================
 .SYNOPSIS
-    Arrêt de l'ordinateur avec décompte
+    Arrêt d'un ordinateur avec décompte
 
 .DESCRIPTION
-    Ce script PowerShell permet d'arrêter l'ordinateur avec un décompte de secondes
-    Tant que le décompte est actif, un utilisateur peut cliquer sur "annuler" afin
-    l'extinction de l'ordinateur. Dans le cas contraire, au bout du décompte ou si
-    aucune session n'est ouverte l'ordinateur s'éteindra.
+    Ce script PowerShell permet d'arrêter l'ordinateur avec un décompte de secondes.
+    Tant que le décompte est actif, un utilisateur peut cliquer sur "annuler" pour 
+    empêcher l'extinction. Dans le cas contraire, au bout du décompte ou si aucune session
+    n'est ouverte, l'ordinateur s'éteindra. Si une session est vérouillée, le script se
+    termine.
 
 .PARAMETER
     Aucun paramètre n'est requis pour l'exécution de ce script.
 
-.TODO
-    Verifier le comportement du script sur des sessions vérouillées
-
 .LINK
-        https://github.com/MetalSearch/PowerShell/tree/main
+        https://github.com/metalsearch/SmartShutDown
 =========================================================================================
 #>
 
-# Charger l'assembly System.Windows.Forms
-Add-Type -AssemblyName System.Windows.Forms
+function Get-SessionUtilisateur {
+    [CmdletBinding()]
+    param()
 
-# Fonction pour vérifier si une session d'utilisateur est ouverte
-function Get-UserSession {
-  $sessions = Get-WmiObject -Class Win32_ComputerSystem | Select-Object -ExpandProperty UserName
-  return $sessions
+    $sessions = (Get-WmiObject -Class Win32_ComputerSystem).UserName
+    return $sessions
 }
 
-# Fonction pour éteindre l'ordinateur normalement
-function Stop-ComputerNormally {
-  Write-Host "Aucune session ouverte. L'ordinateur va s'éteindre."
-  Stop-Computer -Force
-}
+function Test-SessionsVerrouillees {
+    [CmdletBinding()]
+    param()
 
-# Fonction pour informer l'utilisateur et éteindre l'ordinateur avec un décompte
-function Stop-ComputerWithCountdown {
-  # Déclarer les variables de script
-  $script:countdown = 30
-  $script:cancelled = $false
-
-  # Créer un formulaire pour afficher le décompte
-  $form = New-Object System.Windows.Forms.Form
-  $form.Text = "Arrêt de l'ordinateur"
-  $form.Size = New-Object System.Drawing.Size(300, 150)
-  $form.StartPosition = "CenterScreen"
-
-  # Créer un label pour afficher le décompte
-  $script:label = New-Object System.Windows.Forms.Label
-  $script:label.AutoSize = $true
-  $script:label.Location = New-Object System.Drawing.Point(50, 20)
-  $script:label.Text = "L'ordinateur va être arrêté dans $script:countdown secondes."
-  $form.Controls.Add($script:label)
-
-  # Créer un bouton pour annuler l'arrêt
-  $button = New-Object System.Windows.Forms.Button
-  $button.Location = New-Object System.Drawing.Point(100, 70)
-  $button.Size = New-Object System.Drawing.Size(75, 23)
-  $button.Text = "Annuler"
-  $button.Add_Click({
-    $script:cancelled = $true
-    $form.Close()
-  })
-  $form.Controls.Add($button)
-
-  # Créer un timer pour le décompte
-  $timer = New-Object System.Windows.Forms.Timer
-  $timer.Interval = 1000 # 1 seconde
-  $timer.Add_Tick({
-    if ($script:countdown -gt 0 -and -not $script:cancelled) {
-      $script:countdown--
-      $script:label.Text = "L'ordinateur va être arrêté dans $script:countdown secondes."
-    } elseif ($script:countdown -eq 0) {
-      $timer.Stop()
-      $form.Close() # Fermer le formulaire avant d'éteindre
-      Stop-Computer -Force
+    try {
+        $sessionState = Get-WmiObject -Class Win32_LogonSession | Where-Object { $_.LogonType -eq 2 }
+        if ($sessionState) {
+            return (Get-WmiObject -Class Win32_ComputerSystem).UserName -eq $null
+        } else {
+            return $false
+        }
+    } catch {
+        Write-Error "Échec de la récupération des sessions : $_"
+        return $false
     }
-  })
-
-  # Démarrer le timer et afficher le formulaire
-  $timer.Start()
-  $form.ShowDialog()
-
-  # Si le bouton Annuler a été cliqué, arrêter le timer
-  if ($script:cancelled) {
-    $timer.Stop()
-    Write-Host "L'arrêt de l'ordinateur a été annulé."
-  }
 }
 
-# Vérifier si une session d'utilisateur est ouverte
-$sessions = Get-UserSession
+function Stop-ComputerNormally {
+    [CmdletBinding()]
+    param()
 
-if (-not $sessions) {
-  # Aucune session ouverte, éteindre l'ordinateur normalement
-  Stop-ComputerNormally
-} else {
-  # Une session est ouverte, informer l'utilisateur et éteindre l'ordinateur avec un décompte
-  Stop-ComputerWithCountdown
+    Write-Host "Aucune session ouverte. L'ordinateur va s'éteindre."
+    Stop-Computer -Force
 }
+
+function Show-ShutdownCountdownDialog {
+    [CmdletBinding()]
+    param(
+        $countdownSeconds = 30
+    )
+
+    Add-Type -AssemblyName System.Windows.Forms
+
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = "Arrêt de l'ordinateur"
+    $form.Size = New-Object System.Drawing.Size(300, 150)
+    $form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
+
+    $label = New-Object System.Windows.Forms.Label
+    $label.AutoSize = $true
+    $label.Location = New-Object System.Drawing.Point(50, 20)
+    $label.Text = "L'ordinateur va être arrêté dans $countdownSeconds secondes."
+    $form.Controls.Add($label)
+
+    $buttonCancel = New-Object System.Windows.Forms.Button
+    $buttonCancel.Location = New-Object System.Drawing.Point(100, 70)
+    $buttonCancel.Size = New-Object System.Drawing.Size(75, 23)
+    $buttonCancel.Text = "Annuler"
+    $buttonCancel.Add_Click({
+        $script:cancelled = $true
+        $form.Close()
+    })
+    $form.Controls.Add($buttonCancel)
+
+    $timer = New-Object System.Windows.Forms.Timer
+    $timer.Interval = [System.TimeSpan]::FromSeconds(1)
+    $timer.Start()
+
+    $label.DataBindings.Add("Text", ([ref]$countdown), "CountToValue")
+
+    $script:cancelled = $false
+
+    $form.ShowDialog() | Out-Null
+}
+
+function Main {
+    try {
+        # Vérifier si des sessions utilisateur sont ouvertes
+        $sessions = Get-SessionUtilisateur
+        
+        if (-not $sessions) {
+            Stop-ComputerNormally
+            return
+        }
+
+        # Vérifier si les sessions sont verrouillées
+        $isLocked = Test-SessionsVerrouillees
+
+        if ($isLocked) {
+            Write-Host "La session est verrouillée. L'arrêt ne peut pas être effectué."
+            Start-Sleep -Seconds 5
+            return
+        }
+
+        # Afficher le décompte et attendre l'utilisateur
+        Show-ShutdownCountdownDialog
+
+        if ($script:cancelled) {
+            Write-Host "L'arrêt a été annulé par l'utilisateur."
+            return
+        }
+    } catch {
+        Write-Error $_.Exception.Message
+    }
+
+    # Si le décompte est terminé ou si l'utilisateur n'a pas annulé, arrêter l'ordinateur
+    Stop-Computer -Force
+}
+
+# Lancer l'exécution principale
+Main
