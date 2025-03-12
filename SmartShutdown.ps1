@@ -1,21 +1,19 @@
 <#
-=========================================================================================
+===========================================================================================================================================================
 .SYNOPSIS
-    Arrêt d'un ordinateur avec décompte
+    Arrêt d'un ordinateur avec prise en compte de la vonlonté de son utilisateur
 
 .DESCRIPTION
-    Ce script PowerShell permet d'arrêter l'ordinateur avec un décompte de secondes.
-    Tant que le décompte est actif, un utilisateur peut cliquer sur "annuler" pour 
-    empêcher l'extinction. Dans le cas contraire, au bout du décompte ou si aucune session
-    n'est ouverte, l'ordinateur s'éteindra. Si une session est vérouillée, le script se
-    termine.
+    Ce script PowerShell permet d'arrêter un ordinateur tout en laissant la possibilité à un utilisateur d'annuler l'extinction durant un décompte de temps 
+    Si aucune session est ouverte, l'ordinateur s'arrête immédiatement.
+    Si une session est vérouillée, l'arrêt est abandonné et le script se termine
 
 .PARAMETER
     Aucun paramètre n'est requis pour l'exécution de ce script.
 
 .LINK
-        https://github.com/metalsearch/SmartShutDown
-=========================================================================================
+        https://github.com/MetalSearch/PowerShell
+===========================================================================================================================================================
 #>
 
 function Get-SessionUtilisateur {
